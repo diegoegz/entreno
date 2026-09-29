@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Entreno">
+<meta name="theme-color" content="#0f1113">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style id="shell">
+  /* Solo en la versión instalada: márgenes para notch / barra de inicio */
+  html, body { margin: 0; }
+  :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+</style>
+<!-- BEGIN PAGE -->
+<title>Registro de Entreno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+  /* Layout: una columna angosta pensada para una mano; la acción principal siempre en la barra inferior fija. */
+  :root {
+    --bg: #0f1113; --surface: #191c1f; --surface-2: #23272b; --line: #30353a;
+    --fg: #eef0f1; --muted: #8c949c; --accent: #f0b43c; --accent-fg: #1c1404;
+    --ok: #5fc48c; --warn: #e3924a;
+    --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --r: 14px;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f3f4f5; --surface: #ffffff; --surface-2: #e9ebed; --line: #d6d9dc;
+      --fg: #121416; --muted: #5d656d; --accent: #e8a321; --accent-fg: #1c1404;
+      --ok: #1f8a52; --warn: #b8621c; color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f3f4f5; --surface: #ffffff; --surface-2: #e9ebed; --line: #d6d9dc;
+    --fg: #121416; --muted: #5d656d; --accent: #e8a321; --accent-fg: #1c1404;
+    --ok: #1f8a52; --warn: #b8621c; color-scheme: light;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); color: var(--fg); font: 16px/1.4 var(--body); min-height: 100%; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #app { max-width: 520px; margin: 0 auto; padding-inline: 16px; padding-block: 0 120px; }
+
+  /* Barra superior */
+  .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+         display: flex; align-items: center; gap: 8px; min-height: 52px; margin-inline: -16px; padding-inline: 12px; }
+  .back { display: flex; align-items: center; gap: 2px; color: var(--accent); font-weight: 600; padding: 8px 6px; min-height: 44px; }
+  .top .ttl { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted);
+          padding: 6px 10px; border-radius: 99px; background: var(--surface); white-space: nowrap; min-height: 32px; }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+  .pill.pend .dot { background: var(--warn); }
+  .pill.err { color: var(--warn); }
+  .pill.err .dot { background: var(--warn); }
+  .pill.busy .dot { background: var(--muted); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+
+  /* Tipografía */
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1, h2 { font-family: var(--display); font-weight: 700; margin: 0; line-height: 1.05; text-wrap: balance; }
+  h1 { font-size: 34px; letter-spacing: .01em; }
+  h2 { font-size: 22px; }
+  .muted { color: var(--muted); }
+  .num { font-family: var(--display); font-variant-numeric: tabular-nums; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  section { margin-top: 24px; }
+
+  /* Tarjeta de hoy */
+  .today { background: var(--surface); border-radius: var(--r); padding: 20px; display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+  .today .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 13px; padding: 4px 10px; border-radius: 99px; background: var(--surface-2); color: var(--fg); }
+  .chip.desc { background: transparent; box-shadow: inset 0 0 0 1px var(--muted); }
+  .bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+
+  .primary { background: var(--accent); color: var(--accent-fg); font-weight: 700; font-size: 18px;
+             border-radius: 12px; min-height: 56px; width: 100%; padding: 0 16px; }
+  .primary:active { transform: scale(.985); }
+  .ghost { color: var(--muted); font-size: 15px; min-height: 44px; padding: 0 8px; }
+  .link { color: var(--accent); font-weight: 600; min-height: 44px; }
+
+  /* Listas */
+  .list { display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r); overflow: hidden; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; min-height: 60px; text-align: left; width: 100%; }
+  .item + .item { border-top: 1px solid var(--line); }
+  .item .grow { flex: 1; min-width: 0; }
+  .item .name { font-weight: 600; }
+  .item .sub { font-size: 14px; color: var(--muted); }
+  .item.next { background: var(--surface-2); }
+  .item.next .name::after { content: "Siguiente"; margin-left: 8px; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+                            text-transform: uppercase; color: var(--accent-fg); background: var(--accent); padding: 2px 6px; border-radius: 4px; vertical-align: 2px; }
+  .item.cur { box-shadow: inset 3px 0 0 var(--accent); }
+  .count { font-family: var(--display); font-size: 20px; font-variant-numeric: tabular-nums; color: var(--muted); min-width: 40px; text-align: right; }
+  .check { width: 26px; height: 26px; border-radius: 50%; background: var(--ok); color: var(--bg); display: grid; place-items: center; font-weight: 800; font-size: 15px; flex: none; }
+  .weeklabel { margin: 18px 0 8px; }
+
+  /* Ejercicio */
+  .exhead { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .plan { font-size: 15px; color: var(--muted); }
+  .last { background: var(--surface); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .last .sets { font-family: var(--display); font-size: 22px; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+
+  .sets-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+  .setrow { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 12px; padding: 12px 14px; min-height: 56px; width: 100%; text-align: left; }
+  .setrow .k { font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--muted); width: 28px; }
+  .setrow .v { flex: 1; font-family: var(--display); font-size: 24px; font-variant-numeric: tabular-nums; }
+  .setrow.todo .v { color: var(--muted); font-size: 17px; font-family: var(--body); }
+  .setcard { background: var(--surface); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: inset 0 0 0 2px var(--accent); }
+  .setcard .hd { display: flex; justify-content: space-between; align-items: baseline; }
+  .stepper { display: grid; grid-template-columns: 64px 1fr 64px; gap: 8px; align-items: stretch; }
+  .stepper button { background: var(--surface-2); border-radius: 12px; font-size: 30px; font-weight: 500; min-height: 64px; }
+  .stepper button:active { background: var(--line); }
+  .field { position: relative; }
+  .field input { width: 100%; height: 100%; min-height: 64px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg);
+                 color: var(--fg); text-align: center; font-family: var(--display); font-weight: 600; font-size: 38px;
+                 font-variant-numeric: tabular-nums; padding: 0 30px 0 8px; }
+  .field span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; pointer-events: none; }
+  .row2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .err-msg { color: var(--warn); font-size: 14px; }
+
+  .rir { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .rir button { background: var(--surface); border-radius: 10px; min-height: 48px; font-family: var(--display); font-size: 22px; font-weight: 600; }
+  .rir button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+  textarea { width: 100%; min-height: 72px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
+             color: var(--fg); font: 16px/1.4 var(--body); padding: 12px; resize: vertical; }
+  input.plain { width: 100%; min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
+                color: var(--fg); font: 16px var(--body); padding: 0 12px; }
+
+  /* Barra de acción inferior */
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: linear-gradient(to top, var(--bg) 70%, transparent);
+          padding: 20px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .dock > div { max-width: 488px; margin: 0 auto; display: flex; gap: 8px; }
+
+  /* Resumen */
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+  .stat { background: var(--surface); border-radius: var(--r); padding: 14px; }
+  .stat .big { font-family: var(--display); font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .banner { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-top: 8px; }
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(60px + env(safe-area-inset-top, 0px)); z-index: 9;
+           background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-size: 15px; font-weight: 600;
+           max-width: calc(100% - 32px); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+<!-- END PAGE -->
+</head>
+<body>
+<!-- BEGIN BODY -->
+<div id="app"></div>
+<div id="dock" class="dock" hidden><div id="dockin"></div></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script>
+/* =====================================================================
+   Registro de Entreno — PWA que lee/escribe el "Registro Diario" del meso actual
+   vía un Google Apps Script (Code.gs). Todo lo cargado se guarda primero en el
+   teléfono (cola offline) y se sincroniza en segundo plano.
+   ===================================================================== */
+const DEMO_ONLY = window.DEMO_ONLY === true; // la versión de vista previa solo corre con datos de ejemplo
+const KG_STEP = 2.5;
+
+// ---------- almacenamiento local seguro ----------
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+const K = { cfg: 'gt.cfg', data: 'gt.data', queue: 'gt.queue', view: 'gt.view', draft: 'gt.draft' };
+
+let cfg = DEMO_ONLY ? { demo: true } : LS.get(K.cfg, null); // {url, token} | {demo:true}
+let data = LS.get(K.data, null);                           // respuesta de load_() del script
+let queue = LS.get(K.queue, []);                           // operaciones pendientes de subir
+let view = LS.get(K.view, { name: 'home' });               // pantalla actual (se restaura al volver del reloj)
+let draft = LS.get(K.draft, {});                           // valores del stepper aún no guardados
+const net = { syncing: false, loading: false, error: null };
+if (cfg && cfg.demo && !(data && data.demo)) data = null;
+if (cfg && !cfg.demo && data && data.demo) data = null;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- helpers de dominio ----------
+const pad = n => String(n).padStart(2, '0');
+const isoToday = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const ddmm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+const DIA3 = { Lunes: 'Lun', Martes: 'Mar', 'Miércoles': 'Mié', Jueves: 'Jue', Viernes: 'Vie', 'Sábado': 'Sáb', Domingo: 'Dom' };
+const fmtN = n => String(Math.round(n * 100) / 100).replace('.', ',');
+const fmtKg = kg => (kg == null || kg === 0) ? 'PC' : fmtN(kg);                 // PC = peso corporal
+const fmtSet = s => `${fmtKg(s.kg)} × ${s.reps}`;
+const parseNum = v => { if (v == null || String(v).trim() === '') return null; const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
+const done = st => st && st.reps != null;
+
+/** "3 x 5–7" -> {sets: 3, reps: "5–7"} */
+function parseObj(obj) {
+  const m = String(obj || '').match(/(\d+)(?:\s*[-–]\s*(\d+))?\s*[x×]\s*(.+)/i);
+  return m ? { sets: +(m[2] || m[1]), reps: m[3].trim() } : { sets: 3, reps: '' };
+}
+const target = e => parseObj(e.obj).sets;
+const nDone = e => e.sets.filter(done).length;
+const sessProgress = s => s.ejercicios.reduce((a, e) => ({ d: a.d + Math.min(nDone(e), target(e)) , t: a.t + target(e), x: a.x + nDone(e) }), { d: 0, t: 0, x: 0 });
+const getSess = n => data && data.sessions.find(s => s.n === n);
+
+/** Última vez que hizo ese ejercicio (cualquier rutina) antes de esta sesión. */
+function lastTime(s, e) {
+  for (const ss of [...data.sessions].filter(x => x.n < s.n).sort((a, b) => b.n - a.n)) {
+    const ee = ss.ejercicios.find(x => x.nombre === e.nombre && x.sets.some(done));
+    if (ee) return { s: ss, e: ee };
+  }
+  return null;
+}
+
+/** Sesión sugerida: la de hoy; si no hay, la próxima; si no, la última. */
+function suggested() {
+  const t = isoToday(), ss = data.sessions;
+  const today = ss.find(s => s.fecha === t);
+  if (today) return { s: today, label: 'Hoy' };
+  const next = ss.find(s => s.fecha > t);
+  if (next) return { s: next, label: 'Próxima' };
+  return { s: ss[ss.length - 1], label: 'Última' };
+}
+
+/** Valores precargados para la serie k: peso de la serie anterior de hoy, o lo de la última vez. */
+function suggestSet(s, e, k) {
+  const prevToday = [...e.sets.slice(0, k)].reverse().find(done);
+  const lt = lastTime(s, e);
+  let ltSet = null;
+  if (lt) ltSet = done(lt.e.sets[k]) ? lt.e.sets[k] : [...lt.e.sets].reverse().find(done);
+  let kg = prevToday ? prevToday.kg : (ltSet ? ltSet.kg : null);
+  if (!prevToday && kg && s.fase === 'Descarga' && lt && lt.s.fase !== 'Descarga') kg = Math.round(kg * 0.9 / KG_STEP) * KG_STEP; // ~90 % en descarga
+  const reps = ltSet ? ltSet.reps : (prevToday ? prevToday.reps : null);
+  return { kg, reps };
+}
+
+// ---------- persistencia + cola ----------
+function persist() { LS.set(K.data, data); LS.set(K.queue, queue); LS.set(K.view, view); LS.set(K.draft, draft); }
+
+function enqueue(op) {
+  op.key = op.t === 'set' ? `set|${op.n}|${op.ej}|${op.k}` : `meta|${op.n}|${op.ej}`;
+  op.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  queue = queue.filter(q => q.key !== op.key); // la última edición de la misma celda gana
+  queue.push(op);
+  persist(); renderPill(); sync();
+}
+
+/** Reaplica lo pendiente sobre datos frescos del servidor (para no "perder" series aún no subidas). */
+function applyQueue(d) {
+  for (const op of queue) {
+    const s = d.sessions.find(x => x.n === op.n); if (!s) continue;
+    const e = s.ejercicios.find(x => x.nombre === op.ej); if (!e) continue;
+    if (op.t === 'set') e.sets[op.k] = { kg: op.kg, reps: op.reps };
+    else { e.rir = op.rir; e.nota = op.nota; }
+  }
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function sync() {
+  if (net.syncing || !queue.length || !cfg) return;
+  if (cfg.demo) { net.syncing = true; renderPill(); await sleep(400); queue = []; net.syncing = false; persist(); renderPill(); return; }
+  if (!navigator.onLine) { renderPill(); return; }
+  net.syncing = true; renderPill();
+  const batch = queue.slice(0, 40);
+  let again = false;
+  try {
+    const r = await fetch(cfg.url, {
+      method: 'POST', // text/plain evita el preflight CORS que Apps Script no soporta
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ token: cfg.token, ops: batch.map(({ key, ...o }) => o) })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'Error del script');
+    const drop = new Set([...j.done, ...j.failed.map(f => f.id)]);
+    queue = queue.filter(q => !drop.has(q.id));
+    net.error = j.failed.length ? j.failed[0].error : null;
+    again = queue.length > 0 && !j.failed.length;
+  } catch (err) {
+    net.error = navigator.onLine ? `No se pudo guardar en Sheets: ${err.message || err}` : null;
+  } finally {
+    net.syncing = false; persist(); renderPill();
+  }
+  if (again) sync();
+}
+setInterval(() => { if (queue.length) sync(); }, 15000);
+addEventListener('online', sync);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { sync(); } });
+
+async function load(showToast) {
+  if (cfg.demo) { if (!data) { data = makeDemo(); persist(); } render(); return; }
+  net.loading = true; renderPill();
+  try {
+    const r = await fetch(`${cfg.url}?token=${encodeURIComponent(cfg.token)}`);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'Error del script');
+    delete j.ok; applyQueue(j); data = j; net.error = null;
+    persist();
+    if (showToast) toast('Datos actualizados');
+  } catch (err) {
+    net.error = navigator.onLine ? `No pude leer el Sheet: ${err.message || err}` : null;
+    if (!data) throw err;
+  } finally {
+    net.loading = false; render();
+  }
+}
+
+// ---------- acciones ----------
+function saveSet(s, e, k, kg, reps) {
+  e.sets[k] = { kg, reps };
+  enqueue({ t: 'set', n: s.n, row: e.row, ej: e.nombre, k, kg, reps });
+}
+function saveMeta(s, e) {
+  enqueue({ t: 'meta', n: s.n, row: e.row, ej: e.nombre, rir: e.rir, nota: e.nota || '' });
+}
+function go(v) { view = v; draft = {}; persist(); render(); scrollTo(0, 0); }
+
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2200); }
+
+// ---------- render ----------
+function pillHTML() {
+  if (!cfg) return '';
+  if (cfg.demo) return `<span class="pill" id="pill"><span class="dot"></span>Ejemplo</span>`;
+  if (net.syncing || net.loading) return `<button class="pill busy" id="pill" data-act="pill"><span class="dot"></span>Sincronizando</button>`;
+  if (net.error) return `<button class="pill err" id="pill" data-act="pill"><span class="dot"></span>Error</button>`;
+  if (queue.length) return `<button class="pill pend" id="pill" data-act="pill"><span class="dot"></span>${navigator.onLine ? '' : 'Sin señal · '}${queue.length} pend.</button>`;
+  return `<button class="pill" id="pill" data-act="pill"><span class="dot"></span>Guardado</button>`;
+}
+function renderPill() { const p = $('#pill'); if (p) p.outerHTML = pillHTML(); }
+function topBar(title, backTo) {
+  return `<div class="top">${backTo ? `<button class="back" data-act="back" data-to='${esc(JSON.stringify(backTo))}' aria-label="Volver">‹ ${esc(backTo.label)}</button>` : ''}
+    <div class="ttl">${esc(title)}</div>${pillHTML()}</div>`;
+}
+function dock(html) { const d = $('#dock'); d.hidden = !html; $('#dockin').innerHTML = html || ''; }
+
+function render() {
+  const app = $('#app');
+  if (!cfg) { app.innerHTML = setupHTML(); dock(''); return; }
+  if (!data) { app.innerHTML = topBar('Entreno') + `<section class="muted">Cargando el mesociclo…</section>`; dock(''); return; }
+  if (view.name !== 'home' && view.name !== 'setup' && !getSess(view.n)) view = { name: 'home' };
+  const fn = { home: homeHTML, session: sessionHTML, exercise: exerciseHTML, summary: summaryHTML, setup: setupHTML }[view.name] || homeHTML;
+  app.innerHTML = fn();
+  if (view.name === 'setup') dock('');
+}
+
+// ---- Inicio ----
+function homeHTML() {
+  const { s, label } = suggested();
+  const p = sessProgress(s);
+  const started = p.x > 0;
+  dock(`<button class="primary" data-act="open" data-n="${s.n}">${started ? 'Continuar' : 'Empezar'} · ${esc(s.rutina)}</button>`);
+  const weeks = {};
+  data.sessions.forEach(x => (weeks[x.semana] = weeks[x.semana] || []).push(x));
+  const t = isoToday();
+  return topBar(data.meso.nombre) + `
+    ${cfg.demo ? `<div class="banner">Estás viendo datos de ejemplo. Nada de esto se guarda en tu Sheet.</div>` : ''}
+    <div class="today">
+      <div class="eyebrow">${label} · ${esc(s.dia)} ${ddmm(s.fecha)}</div>
+      <h1>${esc(s.rutina)}</h1>
+      <div class="meta"><span class="chip">Sesión ${s.n}</span><span class="chip">Semana ${s.semana}</span>
+        <span class="chip ${s.fase === 'Descarga' ? 'desc' : ''}">${esc(s.fase)}</span>
+        <span class="chip">${s.ejercicios.length} ejercicios</span></div>
+      <div class="row2"><div class="bar" style="flex:1"><i style="width:${p.t ? Math.round(100 * p.d / p.t) : 0}%"></i></div>
+        <span class="num muted" style="font-size:18px">${p.d}/${p.t} series</span></div>
+    </div>
+    <section>
+      <div class="eyebrow">Todas las sesiones</div>
+      ${Object.keys(weeks).map(w => `
+        <div class="eyebrow weeklabel">Semana ${w}${weeks[w][0].fase === 'Descarga' ? ' · Descarga' : ''}</div>
+        <div class="list">${weeks[w].map(x => {
+          const q = sessProgress(x), full = q.t && q.d >= q.t;
+          return `<button class="item ${x.n === s.n ? 'cur' : ''}" data-act="open" data-n="${x.n}">
+            <div class="grow"><div class="name">${esc(x.rutina)}</div>
+              <div class="sub">${DIA3[x.dia] || esc(x.dia)} ${ddmm(x.fecha)}${x.fecha === t ? ' · hoy' : ''}</div></div>
+            ${full ? '<span class="check" aria-label="Completa">✓</span>' : `<span class="count">${q.x ? `${q.d}/${q.t}` : ''}</span>`}
+          </button>`; }).join('')}</div>`).join('')}
+    </section>
+    <section class="row2">
+      ${cfg.demo ? '' : `<button class="link" data-act="refresh">Actualizar desde Sheets</button>`}
+      <button class="ghost" data-act="setup">Ajustes</button>
+    </section>`;
+}
+
+// ---- Sesión ----
+function sessionHTML() {
+  const s = getSess(view.n);
+  const nextIdx = s.ejercicios.findIndex(e => nDone(e) < target(e));
+  const p = sessProgress(s);
+  dock(`<button class="primary" data-act="${nextIdx >= 0 && p.x === 0 ? 'ex' : 'finish'}" data-i="${nextIdx}">${nextIdx >= 0 && p.x === 0 ? 'Empezar con el primero' : 'Terminar sesión'}</button>`);
+  return topBar(`Sesión ${s.n}`, { name: 'home', label: 'Inicio' }) + `
+    <div class="exhead">
+      <div class="eyebrow">${esc(s.dia)} ${ddmm(s.fecha)} · Semana ${s.semana} · ${esc(s.fase)}</div>
+      <h1>${esc(s.rutina)}</h1>
+      <div class="row2"><div class="bar" style="flex:1"><i style="width:${p.t ? Math.round(100 * p.d / p.t) : 0}%"></i></div>
+        <span class="num muted" style="font-size:18px">${p.d}/${p.t}</span></div>
+    </div>
+    <section class="list">
+      ${s.ejercicios.map((e, i) => {
+        const d = nDone(e), T = target(e), full = d >= T;
+        return `<button class="item ${i === nextIdx ? 'next' : ''}" data-act="ex" data-i="${i}">
+          <div class="grow"><div class="name">${esc(e.nombre)}</div><div class="sub">${esc(e.obj)} · ${esc(e.grupo)}</div></div>
+          ${full ? '<span class="check" aria-label="Hecho">✓</span>' : `<span class="count">${d}/${T}</span>`}
+        </button>`; }).join('')}
+    </section>
+    <p class="muted" style="font-size:14px">Podés hacer los ejercicios en cualquier orden. Tocá el que tengas libre.</p>`;
+}
+
+// ---- Ejercicio ----
+function exerciseHTML() {
+  const s = getSess(view.n), e = s.ejercicios[view.i];
+  const T = target(e), maxS = e.sets.length;
+  const lastIdx = e.sets.reduce((m, st, k) => done(st) ? k : m, -1);
+  const shown = Math.min(maxS, Math.max(T, lastIdx + 1, view.extra || 0));
+  const firstTodo = [...Array(shown).keys()].find(k => !done(e.sets[k]));
+  const active = view.k != null ? view.k : firstTodo;
+  const lt = lastTime(s, e);
+  const allDone = nDone(e) >= T;
+  const isLast = view.i === s.ejercicios.length - 1;
+  // La acción principal vive en la barra inferior (zona del pulgar): guardar la serie activa o, si no hay, terminar el ejercicio.
+  if (active != null) dock(`<button class="primary" data-act="saveset" data-k="${active}">${done(e.sets[active]) ? 'Guardar cambios' : `Serie ${active + 1} hecha ✓`}</button>`);
+  else dock(`<button class="primary" data-act="exdone">${isLast ? 'Terminar ejercicio' : 'Terminar ejercicio →'}</button>`);
+
+  const rows = [];
+  for (let k = 0; k < shown; k++) {
+    const st = e.sets[k];
+    if (k === active) {
+      const v = draft[k] || (done(st) ? st : suggestSet(s, e, k));
+      rows.push(`<div class="setcard" id="setcard">
+        <div class="hd"><h2>Serie ${k + 1} <span class="muted" style="font-size:16px;font-family:var(--body);font-weight:400">de ${T}</span></h2>
+          ${lt && done(lt.e.sets[k]) ? `<span class="muted num" style="font-size:18px">antes ${fmtSet(lt.e.sets[k])}</span>` : ''}</div>
+        <div class="stepper"><button data-act="step" data-f="kg" data-d="-${KG_STEP}" aria-label="Menos peso">−</button>
+          <div class="field"><input id="in-kg" inputmode="decimal" autocomplete="off" value="${v.kg == null ? '' : fmtN(v.kg)}" placeholder="PC" aria-label="Peso en kg"><span>kg</span></div>
+          <button data-act="step" data-f="kg" data-d="${KG_STEP}" aria-label="Más peso">+</button></div>
+        <div class="stepper"><button data-act="step" data-f="reps" data-d="-1" aria-label="Menos reps">−</button>
+          <div class="field"><input id="in-reps" inputmode="numeric" autocomplete="off" value="${v.reps == null ? '' : v.reps}" placeholder="0" aria-label="Repeticiones"><span>reps</span></div>
+          <button data-act="step" data-f="reps" data-d="1" aria-label="Más reps">+</button></div>
+        <div class="err-msg" id="set-err" hidden></div>
+        ${done(st) ? `<div class="row2"><button class="ghost" data-act="cancel">Cancelar</button><button class="ghost" data-act="delset" data-k="${k}">Borrar serie</button></div>` : ''}
+      </div>`);
+    } else if (done(st)) {
+      rows.push(`<button class="setrow" data-act="editset" data-k="${k}"><span class="k">S${k + 1}</span><span class="v">${fmtKg(st.kg)}${st.kg ? ' kg' : ''} × ${st.reps}</span><span class="check">✓</span></button>`);
+    } else {
+      rows.push(`<button class="setrow todo" data-act="editset" data-k="${k}"><span class="k">S${k + 1}</span><span class="v">Pendiente</span></button>`);
+    }
+  }
+  rows.push(`<div class="row2">${shown < maxS ? `<button class="ghost" data-act="addset">+ Agregar serie</button>` : '<span></span>'}
+    ${active != null ? `<button class="ghost" data-act="exdone">${allDone ? 'Terminar ejercicio' : 'Saltear resto →'}</button>` : ''}</div>`);
+
+  return topBar(s.rutina, { name: 'session', n: s.n, label: 'Sesión' }) + `
+    <div class="exhead">
+      <div class="eyebrow">${esc(e.grupo)} · ${view.i + 1} de ${s.ejercicios.length}</div>
+      <h1>${esc(e.nombre)}</h1>
+      <div class="meta" style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip num" style="font-size:16px">${esc(e.obj)}</span>
+        ${s.fase === 'Descarga' ? '<span class="chip desc">Descarga</span>' : ''}</div>
+      ${e.notaPlan ? `<div class="plan">${esc(e.notaPlan)}</div>` : ''}
+    </div>
+    ${lt ? `<section class="last" style="margin-top:14px">
+        <div class="eyebrow">Última vez · ${DIA3[lt.s.dia] || ''} ${ddmm(lt.s.fecha)}${lt.s.rutina !== s.rutina ? ' · ' + esc(lt.s.rutina) : ''}${lt.e.rir != null ? ' · RIR ' + fmtN(lt.e.rir) : ''}</div>
+        <div class="sets">${lt.e.sets.filter(done).map(fmtSet).map(x => `<span>${x}</span>`).join('')}</div>
+        ${lt.e.nota ? `<div class="muted" style="font-size:14px">${esc(lt.e.nota)}</div>` : ''}
+      </section>` : ''}
+    <div class="sets-list">${rows.join('')}</div>
+    <section class="stack">
+      <div class="row2"><div class="eyebrow">RIR real</div><span class="muted" style="font-size:13px">opcional</span></div>
+      <div class="rir" role="group" aria-label="RIR real">${[0, 1, 2, 3, 4, 5].map(r => `<button data-act="rir" data-v="${r}" aria-pressed="${e.rir === r}">${r}</button>`).join('')}</div>
+      <label class="eyebrow" for="in-nota">Nota</label>
+      <textarea id="in-nota" placeholder="Sensaciones, molestias, segundos de colgada…">${esc(e.nota)}</textarea>
+    </section>`;
+}
+
+// ---- Resumen ----
+function summaryHTML() {
+  const s = getSess(view.n), p = sessProgress(s);
+  const vol = s.ejercicios.reduce((a, e) => a + e.sets.reduce((b, st) => b + (done(st) ? (st.kg || 0) * st.reps : 0), 0), 0);
+  dock(`<button class="primary" data-act="home">Listo</button>`);
+  return topBar(`Sesión ${s.n}`, { name: 'session', n: s.n, label: 'Sesión' }) + `
+    <div class="exhead"><div class="eyebrow">Resumen · ${esc(s.dia)} ${ddmm(s.fecha)}</div><h1>${esc(s.rutina)}</h1></div>
+    <div class="stats">
+      <div class="stat"><div class="eyebrow">Volumen</div><div class="big">${Math.round(vol).toLocaleString('es-AR')}<span class="muted" style="font-size:18px"> kg</span></div></div>
+      <div class="stat"><div class="eyebrow">Series</div><div class="big">${p.x}<span class="muted" style="font-size:18px">/${p.t}</span></div></div>
+    </div>
+    <section class="list">${s.ejercicios.map(e => {
+      const best = e.sets.filter(done).sort((a, b) => (b.kg || 0) - (a.kg || 0) || b.reps - a.reps)[0];
+      return `<div class="item"><div class="grow"><div class="name">${esc(e.nombre)}</div>
+        <div class="sub">${nDone(e)} series${best ? ' · mejor ' + fmtSet(best) : ''}${e.rir != null ? ' · RIR ' + fmtN(e.rir) : ''}</div></div></div>`; }).join('')}
+    </section>
+    <p class="muted" style="font-size:14px">${cfg.demo ? 'Modo ejemplo: nada se envió al Sheet.' : queue.length ? `Quedan ${queue.length} cambios por subir. Se suben solos cuando haya señal.` : 'Todo está guardado en tu Sheet.'}</p>`;
+}
+
+// ---- Ajustes / primera vez ----
+function setupHTML() {
+  dock('');
+  const c = cfg && !cfg.demo ? cfg : { url: '', token: '' };
+  return `<div class="top"><div class="ttl">Entreno</div></div>
+    <section class="stack" style="margin-top:8px">
+      <h1>Conectar con tu Sheet</h1>
+      <p class="muted" style="margin:0">Pegá la URL de la aplicación web de Apps Script y el token que pusiste en <b>Code.gs</b>. Se guardan solo en este teléfono.</p>
+      <label class="eyebrow" for="in-url">URL del script</label>
+      <input class="plain" id="in-url" type="url" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(c.url)}" autocomplete="off">
+      <label class="eyebrow" for="in-token">Token</label>
+      <input class="plain" id="in-token" type="password" value="${esc(c.token)}" autocomplete="off">
+      <div class="err-msg" id="setup-err" hidden></div>
+      <button class="primary" data-act="connect">Conectar</button>
+      <button class="link" data-act="demo">Probar con datos de ejemplo</button>
+      ${cfg ? `<button class="ghost" data-act="home">Cancelar</button>` : ''}
+    </section>`;
+}
+
+// ---------- eventos (delegación) ----------
+function readDraft(k) {
+  const kg = parseNum($('#in-kg')?.value), reps = parseNum($('#in-reps')?.value);
+  draft = { [k]: { kg, reps } }; LS.set(K.draft, draft);
+  return { kg, reps };
+}
+
+document.addEventListener('input', ev => {
+  if (ev.target.id === 'in-kg' || ev.target.id === 'in-reps') {
+    const card = $('[data-act="saveset"]'); if (card) readDraft(+card.dataset.k);
+  }
+});
+document.addEventListener('change', ev => {
+  if (ev.target.id === 'in-nota' && view.name === 'exercise') {
+    const s = getSess(view.n), e = s.ejercicios[view.i];
+    const v = ev.target.value.trim();
+    if (v !== (e.nota || '')) { e.nota = v; saveMeta(s, e); }
+  }
+});
+
+document.addEventListener('click', async ev => {
+  const b = ev.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act;
+  const s = view.n != null ? getSess(view.n) : null;
+  const e = s && view.i != null ? s.ejercicios[view.i] : null;
+
+  switch (act) {
+    case 'back': go(JSON.parse(b.dataset.to)); break;
+    case 'home': go({ name: 'home' }); break;
+    case 'open': go({ name: 'session', n: +b.dataset.n }); break;
+    case 'ex': go({ name: 'exercise', n: view.n, i: +b.dataset.i }); break;
+    case 'finish': go({ name: 'summary', n: view.n }); break;
+    case 'setup': go({ name: 'setup' }); break;
+    case 'refresh': load(true); break;
+    case 'pill':
+      if (net.error) toast(net.error); else if (queue.length) { toast(navigator.onLine ? 'Subiendo…' : 'Sin señal: se sube cuando vuelva'); sync(); }
+      else toast('Todo guardado en el Sheet');
+      break;
+
+    case 'step': {
+      const inp = $(b.dataset.f === 'kg' ? '#in-kg' : '#in-reps');
+      const cur = parseNum(inp.value) || 0;
+      const nv = Math.max(0, Math.round((cur + parseFloat(b.dataset.d)) * 100) / 100);
+      inp.value = b.dataset.f === 'kg' ? (nv ? fmtN(nv) : '') : nv;
+      readDraft(+$('[data-act="saveset"]').dataset.k);
+      break;
+    }
+    case 'saveset': {
+      const k = +b.dataset.k, { kg, reps } = readDraft(k);
+      const err = $('#set-err');
+      if (reps == null || reps <= 0 || !Number.isInteger(reps)) { err.textContent = 'Cargá las repeticiones (número entero).'; err.hidden = false; return; }
+      if (kg != null && kg < 0) { err.textContent = 'El peso no puede ser negativo.'; err.hidden = false; return; }
+      saveSet(s, e, k, kg || null, reps);
+      view.k = null; view.extra = null; draft = {}; persist(); render();
+      $('#setcard')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (nDone(e) >= target(e) && k === target(e) - 1) toast('Ejercicio completo');
+      break;
+    }
+    case 'editset': view.k = +b.dataset.k; draft = {}; persist(); render(); $('#setcard')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); break;
+    case 'cancel': view.k = null; draft = {}; persist(); render(); break;
+    case 'delset': {
+      const k = +b.dataset.k;
+      saveSet(s, e, k, null, null);
+      view.k = null; draft = {}; persist(); render(); toast(`Serie ${k + 1} borrada`);
+      break;
+    }
+    case 'addset': view.extra = Math.min(e.sets.length, Math.max(target(e), ...e.sets.map((st, k) => done(st) ? k + 1 : 0)) + 1); view.k = view.extra - 1; persist(); render(); break;
+    case 'rir': {
+      const v = +b.dataset.v;
+      e.rir = e.rir === v ? null : v; // tocar de nuevo lo desmarca
+      saveMeta(s, e);
+      document.querySelectorAll('.rir button').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.v === e.rir)));
+      break;
+    }
+    case 'exdone': {
+      const nota = $('#in-nota'); if (nota && nota.value.trim() !== (e.nota || '')) { e.nota = nota.value.trim(); saveMeta(s, e); }
+      go({ name: 'session', n: view.n });
+      break;
+    }
+
+    case 'demo': cfg = { demo: true }; LS.set(K.cfg, cfg); data = makeDemo(); queue = []; go({ name: 'home' }); break;
+    case 'connect': {
+      const url = $('#in-url').value.trim(), token = $('#in-token').value.trim();
+      const err = $('#setup-err');
+      if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) { err.textContent = 'La URL tiene que ser la de la aplicación web y terminar en /exec.'; err.hidden = false; return; }
+      if (!token) { err.textContent = 'Falta el token.'; err.hidden = false; return; }
+      b.textContent = 'Conectando…'; b.disabled = true;
+      const prev = { cfg, data, queue };
+      cfg = { url, token }; data = null; queue = [];
+      try { await load(); LS.set(K.cfg, cfg); go({ name: 'home' }); toast(`Conectado a ${data.meso.nombre}`); }
+      catch (x) { ({ cfg, data, queue } = prev); render(); const er = $('#setup-err'); er.textContent = `No pude conectar: ${x.message || x}. Revisá la URL, el token y que el acceso sea "Cualquier usuario".`; er.hidden = false; }
+      break;
+    }
+  }
+});
+
+// ---------- datos de ejemplo ----------
+function makeDemo() {
+  const R = {
+    'Pierna A': [['Cuádriceps', 'Sentadilla con barra', '3 x 6–8', 'RIR 2. Descanso 3 min', 60],
+                 ['Isquiosurales', 'Curl femoral sentado', '3 x 10–12', 'RIR 1. Descanso 90 s', 40],
+                 ['Tren inferior', 'Prensa 45°', '3 x 10–12', 'RIR 1-2', 120],
+                 ['Abdomen', 'Elevación de piernas colgado', '3 x 10–15', 'Al final: colgada pasiva (anotar segundos)', 0]],
+    'Torso A': [['Pecho', 'Press banca con barra', '3 x 6–8', 'RIR 2. Descanso 3 min', 50],
+                ['Espalda', 'Jalón al pecho', '3 x 8–10', 'RIR 1-2', 55],
+                ['Hombro lateral', 'Elevaciones laterales en polea', '4 x 12–15', 'RIR 0-1', 7.5],
+                ['Bíceps', 'Curl con barra Z', '3 x 10–12', 'RIR 1', 25]]
+  };
+  const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const offs = [-9, -7, -5, -2, 0, 2, 4, 7, 9, 11];
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  let row = 4;
+  const sessions = offs.map((o, i) => {
+    const d = new Date(today); d.setDate(d.getDate() + o);
+    const fecha = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const rut = i % 2 ? 'Torso A' : 'Pierna A', semana = Math.floor(i / 4) + 1, fase = semana === 3 ? 'Descarga' : 'Carga';
+    const past = o < 0, lvl = Math.floor(i / 2);
+    const ejercicios = R[rut].map(([g, n, obj, nota, base]) => {
+      const T = parseObj(obj).sets;
+      const reps = parseInt(parseObj(obj).reps, 10) + 1;
+      const sets = [0, 1, 2, 3].map(k => past && k < T ? { kg: base ? base + lvl * 2.5 : null, reps: reps - (k === T - 1 ? 1 : 0) } : { kg: null, reps: null });
+      return { row: row++, grupo: g, nombre: n, obj: fase === 'Descarga' ? obj.replace(/^\d+/, m => Math.ceil(m / 2)) : obj, notaPlan: nota, sets, rir: past ? 2 : null, nota: past && !base ? 'Colgada 40 s' : '' };
+    });
+    row += 2;
+    return { n: i + 1, dia: DIAS[d.getDay()], fecha, rutina: rut, fase, semana, horario: '', ejercicios };
+  });
+  return { demo: true, meso: { nombre: 'Meso de ejemplo', url: '', maxSeries: 4 }, sessions };
+}
+
+// ---------- arranque ----------
+if ('serviceWorker' in navigator && !DEMO_ONLY) navigator.serviceWorker.register('sw.js').catch(() => {});
+render();
+if (cfg) load().catch(() => render());
+</script>
+<!-- END BODY -->
+</body>
+</html>
